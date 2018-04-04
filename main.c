@@ -86,7 +86,7 @@ void sigint_handler(int sig){
 // SIGNWINCH -- TODO (maybe)
 
 /***********************
-* Eneter program here! *
+* Enter program here! *
 ***********************/
 
 int main(int argc, char *argv[]){
