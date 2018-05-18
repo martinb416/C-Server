@@ -6,13 +6,14 @@
  * 2018
 */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <argp.h>
 #include <signal.h>
-#include <string.h>
+#include <pthread.h>
 
-#define DEF_PORT 6969
+#include "common.h"
+#include "server.h"
+
+#define IP_LEN		46 // IPV4 mapped to IPV6, plus null terminator
 
 /****************************************
 * ARGP global variables and definitions *
@@ -33,14 +34,16 @@ static struct argp_option options[] = {
 	{"quiet",	'q', 0, 0, "Don't produce any output" },
 	{"silent",	's', 0, OPTION_ALIAS },
 	{"port",	'p', "PORT", 0, "Bind to given port (Default: 6969)"},
+	{"address", 'a', "ADDR", 0, "Address to bind (Default: 127.0.0.1)"},
 	{ 0 }
 };
 
 /* Used by main to communicate with parse_opt. */
 struct arguments{
+	char ip[IP_LEN];
+	char *port;
 	int silent,
-		verbose,
-		port;
+		verbose;
 };
 
 /* Parse a single option. */
@@ -54,15 +57,21 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state){
 		case 'v':
 			arguments->verbose = 1;
 			break;
-		case 'p':
-			arguments->port = atoi(arg);
-			if(arguments->port < 1025 || arguments->port > 65535){
-				printf("Invalid port number, defaulting to %d\n", DEF_PORT);
-				arguments->port = DEF_PORT;
+		case 'p': // TODO: Clean this to protect against attacks (e.g. NOP)
+			if(atoi(arg) < 1025 || atoi(arg) > 65535)
+				printf("Invalid port number, defaulting to %s\n", DEF_PORT);
+			else
+				arguments->port = arg;
+			break;
+		case 'a':
+			if(1){
+				printf("Not sure this would make sense");
 			}
 			break;
 		case ARGP_KEY_ARG:
 		case ARGP_KEY_END:
+			if(!arguments->port)
+				arguments->port = DEF_PORT;
 			// if (state->arg_num < 2) /* Not enough arguments. */
 			// argp_usage (state);
 			break;
@@ -88,18 +97,21 @@ void sigint_handler(int sig){
 /***********************
 * Enter program here! *
 ***********************/
-
 int main(int argc, char *argv[]){
 	struct arguments arguments;
+	pthread_t server_thread;
 
 	signal(SIGINT, sigint_handler);
 
-	arguments.silent = 0;
-	arguments.verbose = 0;
-	arguments.port = DEF_PORT;
+	memset(&arguments, 0, sizeof(struct arguments));
+	argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-	argp_parse (&argp, argc, argv, 0, 0, &arguments);
-	
+	// Cast port string as void pointer for pthread
+	pthread_create(&server_thread, 0, run_server, (void*)arguments.port);
+
+	while(1){
+		//Something
+	}
 
 	return 0;
 }
